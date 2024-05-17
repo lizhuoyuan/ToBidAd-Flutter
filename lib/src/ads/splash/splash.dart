@@ -3,14 +3,11 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:windmill_ad_plugin/src/ads/splash/splash_listener.dart';
 import 'package:windmill_ad_plugin/src/core/windmill_event_handler.dart';
-import 'package:windmill_ad_plugin/src/models/ad_request.dart';
 import 'package:windmill_ad_plugin/windmill_ad_plugin.dart';
 
-class WindmillSplashAd with WindmillEventHandler{
-
-  static const MethodChannel _channel =  MethodChannel('com.windmill/splash');
+class WindmillSplashAd with WindmillEventHandler {
+  static const MethodChannel _channel = MethodChannel('com.windmill/splash');
 
   static const double APP_BOTTOM_HEIGHT = 100.0;
 
@@ -26,15 +23,16 @@ class WindmillSplashAd with WindmillEventHandler{
 
   late MethodChannel _adChannel;
   late final WindmillSplashListener<WindmillSplashAd> _listener;
-  WindmillSplashAd({
-    Key? key,
-    required this.request,
-    required this.width,
-    required this.height,
-    this.title,
-    this.desc,
-    required WindmillSplashListener<WindmillSplashAd> listener
-  }):super() {
+
+  WindmillSplashAd(
+      {Key? key,
+      required this.request,
+      required this.width,
+      required this.height,
+      this.title,
+      this.desc,
+      required WindmillSplashListener<WindmillSplashAd> listener})
+      : super() {
     _uniqId = hashCode.toString();
     _listener = listener;
     delegate = IWindmillSplashListener(this, _listener);
@@ -42,31 +40,27 @@ class WindmillSplashAd with WindmillEventHandler{
     _adChannel.setMethodCallHandler(handleEvent);
   }
 
-
   void updateAdSize(Size size) {
     adSize = size;
   }
 
-  Size? getAdSize(){
+  Size? getAdSize() {
     return adSize;
   }
 
-  Future<bool> isReady() async {
-    bool isReady = await _channel.invokeMethod('isReady', {
-      "uniqId": _uniqId
-    });
+  Future<bool?> isReady() async {
+    bool? isReady = await _channel.invokeMethod('isReady', {"uniqId": _uniqId});
     return isReady;
   }
 
   Future<void> loadAd() async {
-
     var optHeight = height;
-    if(Platform.isIOS && title != null ){ 
-        optHeight -= APP_BOTTOM_HEIGHT;
+    if (Platform.isIOS && title != null) {
+      optHeight -= APP_BOTTOM_HEIGHT;
     }
     await _channel.invokeMethod('load', {
       "uniqId": _uniqId,
-      "width":  width,
+      "width": width,
       "height": optHeight,
       "title": title,
       "desc": desc,
@@ -80,39 +74,32 @@ class WindmillSplashAd with WindmillEventHandler{
     });
   }
 
-  Future<List<AdInfo>?> getCacheAdInfoList() async{
-
-    List<Object?> listStr =  await _channel.invokeMethod('getCacheAdInfoList', {
+  Future<List<AdInfo>?> getCacheAdInfoList() async {
+    List<Object?> listStr = await _channel.invokeMethod('getCacheAdInfoList', {
       "uniqId": _uniqId,
     });
 
+    if (listStr.isNotEmpty) {
+      var cacheList = List.generate(listStr.length, (index) {
+        var adInfoStr = listStr[index] as String;
+        final adInfoJson = json.decode(adInfoStr);
+        return AdInfo.fromJson(adInfoJson);
+      });
+      return cacheList;
+    }
 
-    if(listStr.isNotEmpty){
-
-        var cacheList = List.generate(listStr
-        .length
-        , (index){
-              var adInfoStr  = listStr[index] as String;
-              final adInfoJson = json.decode(adInfoStr);
-              return AdInfo.fromJson(adInfoJson);
-        });
-        return cacheList; 
-    } 
-   
     return null;
   }
-  Future<AdInfo> getAdInfo() async {
-    String adinfoStr = await _channel.invokeMethod("getAdInfo",{
-      "uniqId":_uniqId 
-    });
-    final adInfoJson = json.decode(adinfoStr);
-    return AdInfo.fromJson(adInfoJson); 
+
+  Future<AdInfo?> getAdInfo() async {
+    String? adInfoStr =
+        await _channel.invokeMethod("getAdInfo", {"uniqId": _uniqId});
+    if (adInfoStr == null) return null;
+    final adInfoJson = json.decode(adInfoStr);
+    return AdInfo.fromJson(adInfoJson);
   }
-  
 
   Future<void> destroy() async {
-    await _channel.invokeMethod('destroy', {
-      "uniqId": _uniqId
-    });
+    await _channel.invokeMethod('destroy', {"uniqId": _uniqId});
   }
 }
